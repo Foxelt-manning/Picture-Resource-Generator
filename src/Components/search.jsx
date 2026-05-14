@@ -5,16 +5,10 @@ import { saveSearch, searchExists, getSearch } from '../utils/cacheLogic';
 
 const api = "https://ab-pinetrest.abrahamdw882.workers.dev/";
 
-// Removed Google API URL as it is no longer in use
-
 const SearchPinterest = () => {
     const [query, setQuery] = useState("");
-    const [imageData, setImageData] = useState({
-        pinterest: [],
-        dribble: [] // Kept as placeholder for future use
-    });
-
-    const [visiblityCount, setVisibilityCount] = useState(0);
+    const [imageData, setImageData] = useState({ pinterest: [] });
+    const [visiblityCount, setVisibilityCount] = useState(20);
     const [q, setQ] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -23,37 +17,20 @@ const SearchPinterest = () => {
             if (!q) return;
             setLoading(true);
             try {
-                console.log('Searching for:', q);
-
-                // 1. Check Cache for Pinterest only
+                // Check Cache
                 if (searchExists(q, "pinterest")) {
-                    const cachedPinterest = getSearch(q, "pinterest");
-                    console.log('Pinterest cache found:', cachedPinterest);
-                    
-                    setImageData({
-                        pinterest: cachedPinterest.images || [],
-                        dribble: []
-                    });
-                    setVisibilityCount(20);
+                    const cached = getSearch(q, "pinterest");
+                    setImageData({ pinterest: cached.images || [] });
                     setLoading(false);
                     return;
                 }
 
-                // 2. Fetch from API if not in cache
-                const response = await axios.get(`${api}?query=${q}`);
-                const newPinterestImages = response.data.data;
-
-                // 3. Save to cache
-                saveSearch(q, "pinterest", newPinterestImages);
-
-                setImageData({
-                    pinterest: newPinterestImages,
-                    dribble: []
-                });
-            
-                setVisibilityCount(20);
+                const res = await axios.get(`${api}?query=${q}`);
+                const newImages = res.data.data;
+                saveSearch(q, "pinterest", newImages);
+                setImageData({ pinterest: newImages });
             } catch (error) {
-                console.error("Error fetching images:", error);
+                console.error("Error:", error);
             } finally {
                 setLoading(false);
             }
@@ -61,86 +38,77 @@ const SearchPinterest = () => {
         fetchImages();
     }, [q]);
 
-    const handleClick = () => {
-        setImageData({
-            pinterest: [],
-            dribble: []
-        });
+    const handleSearch = () => {
+        if (!query.trim()) return;
         setQ(query);
+        setVisibilityCount(20);
     };
 
-    // Note: downloadImage function remains the same as it is independent of the Google API
-
     return (
-        <div className="min-h-screen bg-primary">
-            <div className="wrapper">
-                <header>
-                    <div className="search">
-                        <div>
-                            <input 
-                                type="text" 
-                                placeholder="What kind of image do you want?" 
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleClick()}
-                                className="w-full border-white border-2 rounded-lg p-2 placeholder-grey-300"
-                            />
-                        </div>
+        <div className="min-h-screen bg-[#0f0f0f] text-white font-dm-sans">
+            {/* Sticky Header with Pinterest-like Search */}
+            <header className="sticky top-0 z-50 bg-[#0f0f0f]/80 backdrop-blur-md border-b border-white/10 px-4 py-4">
+                <div className="max-w-7xl mx-auto flex items-center gap-4">
+                    <div className="text-[#E60023] font-bold text-2xl tracking-tighter">Pictur</div>
+                    <div className="relative flex-1 group">
+                        <input 
+                            type="text" 
+                            placeholder="Search for inspiration..." 
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                            className="w-full bg-[#262626] hover:bg-[#333333] transition-colors rounded-full py-3 px-6 pl-12 outline-none focus:ring-2 focus:ring-white/20 text-base"
+                        />
+                        <svg className="absolute left-4 top-3.5 h-5 w-5 text-gray-400 group-focus-within:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
                     </div>
-                </header>
+                </div>
+            </header>
 
-                {/* Loading State */}
-                {loading && (
-                    <div className="text-center mt-16">
-                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                        <p className="text-gray-400 text-lg mt-4">Loading images...</p>
-                    </div>
-                )}
-
-                {/* Initial State */}
+            <main className="wrapper">
+                {/* Hero Title */}
                 {!q && !loading && (
-                    <div className="text-center mt-16">
-                        <p className="text-gray-400 text-lg">Search for images to get started</p>
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <h1 className="text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-b from-white to-gray-500 bg-clip-text text-transparent">
+                            Discover your next <br /> visual idea
+                        </h1>
+                        <p className="text-gray-400 text-xl max-w-lg">Find Pinterest-sourced inspiration for your creative projects.</p>
                     </div>
                 )}
-                
-                {/* Pinterest Section */}
+
+                {loading && (
+                    <div className="flex flex-col items-center py-20">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#E60023]"></div>
+                    </div>
+                )}
+
+                {/* Results Section */}
                 {!loading && imageData.pinterest.length > 0 && (
-                    <section className="mt-16">
-                        <h2 className="fancy-text text-4xl md:text-6xl mb-8">Pinterest</h2>
-                        <div className="all-movies">
+                    <section className="mt-8">
+                        <div className="all-movies"> {/* Uses your index.css masonry classes */}
                             <ul>
                                 {imageData.pinterest.slice(0, visiblityCount).map((im, i) => (
-                                    <li key={`pinterest-${i}`}>
-                                        <ImageCard data={im} />
+                                    <li key={`pin-${i}`} className="mb-4">
+                                        <ImageCard data={im} query={q} />
                                     </li>
                                 ))}
                             </ul>
                         </div>
+                        
+                        {visiblityCount < imageData.pinterest.length && (
+                            <div className="flex justify-center mt-12 pb-10">
+                                <button 
+                                    onClick={() => setVisibilityCount(prev => prev + 20)}
+                                    className="bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-gray-200 transition-all active:scale-95"
+                                >
+                                    Load More
+                                </button>
+                            </div>
+                        )}
                     </section>
                 )}
-
-                {/* Removed Google Section to prevent crashes */}
-
-                {/* Load More Button */}
-                {!loading && visiblityCount < imageData.pinterest.length && (
-                    <div className="flex justify-center mt-12">
-                        <button 
-                            className="bg-blue-600 hover:bg-blue-800 text-white rounded-lg transition-all duration-300 px-8 py-3 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
-                            onClick={() => setVisibilityCount(prev => prev + 20)}
-                        >
-                            Load More
-                        </button>
-                    </div>
-                )}
-
-                {/* Empty State */}
-                {!loading && q && imageData.pinterest.length === 0 && (
-                    <div className="text-center mt-16">
-                        <p className="text-gray-400 text-lg">No images found. Try a different search term.</p>
-                    </div>
-                )}
-            </div>
+            </main>
         </div>
     );
 };
