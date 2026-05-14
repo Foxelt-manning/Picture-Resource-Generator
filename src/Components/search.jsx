@@ -76,7 +76,7 @@ const SearchPinterest = () => {
 
                 setImageData({
                     pinterest: pinterestImages || newPinterestImages,
-                    google: googleImages || newGoogleImages,
+                  //  google: googleImages || newGoogleImages,
                 });
             
                // console.log(dribbble.data)
