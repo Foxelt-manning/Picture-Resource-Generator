@@ -1,55 +1,61 @@
-import React, { useEffect, useState } from 'react';
-import axios from "axios";
+import React, { useEffect, useState } from 'react'
+import axios from "axios"
 import ImageCard from './ImageCard';
 import { saveSearch, searchExists, getSearch } from '../utils/cacheLogic';
 
-const api = "https://ab-pinetrest.abrahamdw882.workers.dev/";
+const api = "https://ab-pinetrest.abrahamdw882.workers.dev/"
 
 const SearchPinterest = () => {
     const [query, setQuery] = useState("");
     const [imageData, setImageData] = useState({ pinterest: [] });
     const [visiblityCount, setVisibilityCount] = useState(20);
-    const [q, setQ] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [q, setQ] = useState("")
+    const [loading, setLoading] = useState(false)
 
     useEffect(() => {
-        const fetchImages = async () => {
+        const fetchPinterest = async () => {
             if (!q) return;
             setLoading(true);
             try {
-                // Check Cache
+                // 1. Check Cache Logic
                 if (searchExists(q, "pinterest")) {
-                    const cached = getSearch(q, "pinterest");
-                    setImageData({ pinterest: cached.images || [] });
+                    const Cachedpinterest = getSearch(q, "pinterest")
+                    setImageData({ pinterest: Cachedpinterest.images || [] });
                     setLoading(false);
                     return;
                 }
 
-                const res = await axios.get(`${api}?query=${q}`);
+                // 2. Fetch from Pinterest API
+                const res = await axios.get(`${api}?query=${q}`)
                 const newImages = res.data.data;
+
+                // 3. Save to cache
                 saveSearch(q, "pinterest", newImages);
                 setImageData({ pinterest: newImages });
             } catch (error) {
-                console.error("Error:", error);
+                console.error("Error fetching images:", error);
             } finally {
                 setLoading(false);
             }
-        };
-        fetchImages();
-    }, [q]);
+        } 
+        fetchPinterest()
+    }, [q])
 
     const handleSearch = () => {
         if (!query.trim()) return;
+        setImageData({ pinterest: [] });
         setQ(query);
         setVisibilityCount(20);
-    };
+    }
 
     return (
-        <div className="min-h-screen bg-[#0f0f0f] text-white font-dm-sans">
-            {/* Sticky Header with Pinterest-like Search */}
-            <header className="sticky top-0 z-50 bg-[#0f0f0f]/80 backdrop-blur-md border-b border-white/10 px-4 py-4">
+        <div className="min-h-screen bg-[#111] text-white font-dm-sans">
+            {/* Pinterest-style Sticky Header */}
+            <header className="sticky top-0 z-50 bg-[#111]/90 backdrop-blur-md py-4 px-6 border-b border-white/10">
                 <div className="max-w-7xl mx-auto flex items-center gap-4">
-                    <div className="text-[#E60023] font-bold text-2xl tracking-tighter">Pictur</div>
+                    <div className="text-[#E60023] font-bold text-2xl px-2 cursor-pointer" onClick={() => window.location.reload()}>
+                        Pictur
+                    </div>
                     <div className="relative flex-1 group">
                         <input 
                             type="text" 
@@ -57,52 +63,56 @@ const SearchPinterest = () => {
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                            className="w-full bg-[#262626] hover:bg-[#333333] transition-colors rounded-full py-3 px-6 pl-12 outline-none focus:ring-2 focus:ring-white/20 text-base"
+                            className="w-full bg-[#333] hover:bg-[#444] transition-colors rounded-full py-3 px-12 outline-none focus:ring-2 focus:ring-white/20"
                         />
-                        <svg className="absolute left-4 top-3.5 h-5 w-5 text-gray-400 group-focus-within:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                        <span className="absolute left-4 top-3.5 text-gray-400">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </span>
                     </div>
                 </div>
             </header>
 
-            <main className="wrapper">
-                {/* Hero Title */}
+            <main className="wrapper pt-8">
+                {/* Initial Welcome State */}
                 {!q && !loading && (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <h1 className="text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-b from-white to-gray-500 bg-clip-text text-transparent">
-                            Discover your next <br /> visual idea
+                    <div className="text-center py-24">
+                        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent">
+                            Discover your next <br/> creative idea
                         </h1>
-                        <p className="text-gray-400 text-xl max-w-lg">Find Pinterest-sourced inspiration for your creative projects.</p>
+                        <p className="text-gray-400 text-xl">Search for anything to begin</p>
                     </div>
                 )}
 
                 {loading && (
                     <div className="flex flex-col items-center py-20">
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#E60023]"></div>
+                        <p className="mt-4 text-gray-500">Curating results...</p>
                     </div>
                 )}
-
-                {/* Results Section */}
+                
+                {/* Masonry Waterfall Grid */}
                 {!loading && imageData.pinterest.length > 0 && (
-                    <section className="mt-8">
-                        <div className="all-movies"> {/* Uses your index.css masonry classes */}
-                            <ul>
+                    <section>
+                        <div className="all-movies">
+                            {/* Uses CSS columns for the waterfall effect defined in index.css */}
+                            <ul className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4">
                                 {imageData.pinterest.slice(0, visiblityCount).map((im, i) => (
-                                    <li key={`pin-${i}`} className="mb-4">
+                                    <li key={`pin-${i}`} className="mb-4 break-inside-avoid">
                                         <ImageCard data={im} query={q} />
                                     </li>
                                 ))}
                             </ul>
                         </div>
-                        
+
                         {visiblityCount < imageData.pinterest.length && (
-                            <div className="flex justify-center mt-12 pb-10">
+                            <div className="flex justify-center py-12">
                                 <button 
+                                    className="bg-white text-black rounded-full px-10 py-3 font-bold hover:scale-105 transition-transform active:scale-95 shadow-lg"
                                     onClick={() => setVisibilityCount(prev => prev + 20)}
-                                    className="bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-gray-200 transition-all active:scale-95"
                                 >
-                                    Load More
+                                    Explore more
                                 </button>
                             </div>
                         )}
@@ -110,7 +120,7 @@ const SearchPinterest = () => {
                 )}
             </main>
         </div>
-    );
-};
+    )
+}
 
-export default SearchPinterest;
+export default SearchPinterest
