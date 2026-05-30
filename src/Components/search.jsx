@@ -19,6 +19,8 @@ const SearchPinterest = () => {
     const [q, setQ] = useState("")
     const [loading, setLoading] = useState(false)
     const [homeTab, setHomeTab] = useState('recent')
+    const [homePreviews, setHomePreviews] = useState([])
+    const [previewLoading, setPreviewLoading] = useState(false)
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -28,6 +30,15 @@ const SearchPinterest = () => {
         'home office setup',
         'travel photography',
         'fashion inspiration',
+        'nature textures'
+    ]
+
+    const featuredTerms = [
+        'dark aesthetic',
+        'minimal wallpaper',
+        'fashion inspiration',
+        'home office setup',
+        'travel photography',
         'nature textures'
     ]
 
@@ -78,6 +89,45 @@ const SearchPinterest = () => {
         } 
         fetchImages()
     }, [q, activeTab]) // Refetch if query or tab changes
+
+    useEffect(() => {
+        if (q) return;
+
+        let active = true;
+
+        const loadPreviewImages = async () => {
+            setPreviewLoading(true);
+            try {
+                const previewData = await Promise.all(featuredTerms.map(async (term) => {
+                    const cached = searchExists(term, activeTab) ? getSearch(term, activeTab) : null;
+                    let images = cached?.images || [];
+
+                    if (!images.length) {
+                        const res = await axios.get(`${api}?query=${encodeURIComponent(term)}`);
+                        images = res.data?.data || [];
+                    }
+
+                    const firstImage = images?.[0]?.image || images?.[0]?.images || images?.[0]?.url || images?.[0]?.src || images?.[0] || null;
+
+                    return firstImage ? { term, image: firstImage } : null;
+                }));
+
+                if (active) {
+                    setHomePreviews(previewData.filter(Boolean));
+                }
+            } catch (error) {
+                console.error('Error loading home previews:', error);
+            } finally {
+                if (active) setPreviewLoading(false);
+            }
+        }
+
+        loadPreviewImages();
+
+        return () => {
+            active = false;
+        }
+    }, [q, activeTab])
 
     const handleSearch = () => {
         if (!query.trim()) return;
@@ -246,6 +296,50 @@ const SearchPinterest = () => {
                                     ))}
                                 </div>
                             )}
+
+                            <div className="mt-8">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="text-sm sm:text-base font-bold text-gray-300 uppercase tracking-[0.2em]">Featured searches</div>
+                                    <div className="text-xs text-gray-500">Tap any card to search it</div>
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                                    {(previewLoading || homePreviews.length === 0)
+                                        ? featuredTerms.slice(0, 6).map((term) => (
+                                            <div key={term} className="group overflow-hidden rounded-3xl border border-white/10 bg-[#171717]">
+                                                <div className="aspect-[3/4] animate-pulse bg-[#222]" />
+                                                <div className="p-3">
+                                                    <div className="h-4 w-3/4 rounded-full bg-white/10" />
+                                                </div>
+                                            </div>
+                                        ))
+                                        : homePreviews.map(({ term, image }) => (
+                                            <button
+                                                key={term}
+                                                type="button"
+                                                onClick={() => runQuickSearch(term, activeTab)}
+                                                className="group overflow-hidden rounded-3xl border border-white/10 bg-[#171717] text-left transition-transform hover:-translate-y-1 hover:border-white/20"
+                                            >
+                                                <div className="relative aspect-[3/4] overflow-hidden">
+                                                    <img
+                                                        src={image}
+                                                        alt={term}
+                                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                        loading="lazy"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                                    <div className="absolute bottom-3 left-3 right-3">
+                                                        <div className="inline-flex rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold text-black shadow-lg">Preview</div>
+                                                    </div>
+                                                </div>
+                                                <div className="p-3">
+                                                    <div className="text-sm font-bold capitalize text-white">{term}</div>
+                                                    <div className="mt-1 text-xs text-gray-400">Search and open the first result</div>
+                                                </div>
+                                            </button>
+                                        ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
