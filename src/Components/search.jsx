@@ -3,7 +3,7 @@ import axios from "axios"
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import ImageCard from './ImageCard';
 import Seo from './Seo';
-import { saveSearch, searchExists, getSearch, getRecentSearches } from '../utils/cacheLogic';
+import { saveSearch, searchExists, getSearch, getRecentSearches, saveInspirationLink, getInspirationLinks } from '../utils/cacheLogic';
 import { SITE_NAME } from '../config/site';
 
 const api = "https://ab-pinetrest.abrahamdw882.workers.dev/"
@@ -109,6 +109,10 @@ const SearchPinterest = () => {
 
                     const firstImage = images?.[0]?.image || images?.[0]?.images || images?.[0]?.url || images?.[0]?.src || images?.[0] || null;
 
+                    if (firstImage) {
+                        saveInspirationLink({ term, image: firstImage, source: activeTab });
+                    }
+
                     return firstImage ? { term, image: firstImage } : null;
                 }));
 
@@ -162,6 +166,7 @@ const SearchPinterest = () => {
     }
 
     const recentSearches = getRecentSearches();
+    const inspirationLinks = getInspirationLinks();
 
     const runQuickSearch = (nextQuery, tab = activeTab) => {
         setQuery(nextQuery);
@@ -338,6 +343,45 @@ const SearchPinterest = () => {
                                                 </div>
                                             </button>
                                         ))}
+                                </div>
+                            </div>
+
+                            <div className="mt-8">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="text-sm sm:text-base font-bold text-gray-300 uppercase tracking-[0.2em]">Saved inspiration links</div>
+                                    <div className="text-xs text-gray-500">Stored locally in your browser</div>
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                                    {inspirationLinks.length > 0 ? inspirationLinks.slice(0, 6).map(({ id, term, image }) => (
+                                        <button
+                                            key={id}
+                                            type="button"
+                                            onClick={() => runQuickSearch(term, activeTab)}
+                                            className="group overflow-hidden rounded-3xl border border-white/10 bg-[#171717] text-left transition-transform hover:-translate-y-1 hover:border-white/20"
+                                        >
+                                            <div className="relative aspect-[3/4] overflow-hidden">
+                                                <img
+                                                    src={image}
+                                                    alt={term}
+                                                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                    loading="lazy"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                                <div className="absolute bottom-3 left-3 right-3">
+                                                    <div className="inline-flex rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold text-black shadow-lg">Local</div>
+                                                </div>
+                                            </div>
+                                            <div className="p-3">
+                                                <div className="text-sm font-bold capitalize text-white">{term}</div>
+                                                <div className="mt-1 text-xs text-gray-400">Saved to local storage</div>
+                                            </div>
+                                        </button>
+                                    )) : (
+                                        <div className="col-span-full rounded-2xl border border-dashed border-white/10 bg-[#171717] px-4 py-8 text-center text-sm text-gray-400">
+                                            Inspiration links will appear here after previews load.
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

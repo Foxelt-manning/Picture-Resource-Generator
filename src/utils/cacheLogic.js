@@ -56,6 +56,38 @@ export const getRecentSearches = () => {
     }
 }
 
+const INSPIRATION_LINKS_KEY = 'inspiration_links';
+
+export const getInspirationLinks = () => {
+    try {
+        const raw = localStorage.getItem(INSPIRATION_LINKS_KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        return Array.isArray(list) ? list : [];
+    } catch (error) {
+        console.warn('getInspirationLinks: invalid data', error);
+        localStorage.removeItem(INSPIRATION_LINKS_KEY);
+        return [];
+    }
+}
+
+export const saveInspirationLink = ({ term, image, source = 'pinterest' }) => {
+    if (!term || !image) return null;
+
+    const list = getInspirationLinks();
+    const filtered = list.filter(item => !(item.term === term && item.image === image));
+    const nextItem = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        term,
+        image,
+        source,
+        timestamp: Date.now()
+    };
+
+    filtered.unshift(nextItem);
+    localStorage.setItem(INSPIRATION_LINKS_KEY, JSON.stringify(filtered.slice(0, 24)));
+    return nextItem;
+}
+
 // Saved collections (persisted array of { id, url, query, source, timestamp })
 const SAVED_KEY = 'saved_collection';
 
