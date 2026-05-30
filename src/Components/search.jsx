@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react'
 import axios from "axios"
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import ImageCard from './ImageCard';
-import PwaInstallButton from './PwaInstallButton';
+import Seo from './Seo';
 import { saveSearch, searchExists, getSearch, getRecentSearches } from '../utils/cacheLogic';
+import { SITE_NAME } from '../config/site';
 
 const api = "https://ab-pinetrest.abrahamdw882.workers.dev/"
 
@@ -125,12 +126,16 @@ const SearchPinterest = () => {
 
     return (
         <div className="min-h-screen bg-[#111] text-white font-dm-sans">
+            <Seo
+                title={q ? `${q} on ${activeTab}` : `${SITE_NAME} visual search`}
+                description={q ? `Explore ${q} inspiration from ${activeTab}. Save results, revisit recent searches, and install the PWA.` : 'Search visual inspiration, save collections, and install the PWA for a faster experience.'}
+            />
             {/* Header with Search & Tabs */}
             <header className="sticky top-0 z-50 bg-[#111]/95 backdrop-blur-md border-b border-white/10">
                 <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 space-y-3 sm:space-y-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[#E60023] font-bold text-2xl tracking-tighter cursor-pointer">
-                            <button type="button" onClick={handleHome}>Pictur</button>
+                            <button type="button" onClick={handleHome}>{SITE_NAME}</button>
                             <Link
                                 to="/saved"
                                 className="px-3 py-1 rounded-full text-sm font-bold text-gray-400 hover:text-white"
@@ -143,7 +148,6 @@ const SearchPinterest = () => {
                             >
                                 Settings
                             </Link>
-                            <PwaInstallButton />
                         </div>
                         
                         {/* Tab Switcher */}

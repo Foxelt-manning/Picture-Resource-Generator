@@ -98,7 +98,7 @@ const SavedCollections = ({ onSearch }) => {
       ))}
 
       {active && (
-        <FullImageCard src={active} alt={'Saved full view'} onClose={() => setActive(null)} />
+        <FullImageCard src={active} alt={'Saved full view'} query={items.find(item => item.url === active)?.query || ''} source={items.find(item => item.url === active)?.source || ''} onClose={() => setActive(null)} />
       )}
     </div>
   )

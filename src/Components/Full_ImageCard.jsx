@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { isSaved, removeFromCollection, saveToCollection } from '../utils/cacheLogic'
 
-const FullImageCard = ({ src, alt, onClose }) => {
+const FullImageCard = ({ src, alt, query = '', source = '', onClose }) => {
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
     window.addEventListener('keydown', onKey);
+    setSaved(isSaved(src));
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener('keydown', onKey);
     };
-  }, [onClose]);
+  }, [src, onClose]);
 
   if (!src) return null;
 
@@ -52,6 +55,17 @@ const FullImageCard = ({ src, alt, onClose }) => {
     }
   };
 
+  const handleSave = () => {
+    if (!saved) {
+      saveToCollection(src, query || alt || '', source || '')
+      setSaved(true)
+      return
+    }
+
+    removeFromCollection(src)
+    setSaved(false)
+  }
+
   return createPortal(
     <div className='fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4'>
       <div className='absolute inset-0' onClick={onClose} />
@@ -70,12 +84,22 @@ const FullImageCard = ({ src, alt, onClose }) => {
           </svg>
         </button>
 
-        <button
-          onClick={handleDownload}
-          className='absolute top-3 left-3 z-20 bg-[#E60023] text-white px-3 py-2 rounded-md hover:opacity-90'
-        >
-          {saving ? 'Saving...' : 'Download'}
-        </button>
+        <div className='absolute top-3 left-3 z-20 flex flex-wrap gap-2'>
+          <button
+            onClick={handleDownload}
+            className='bg-[#E60023] text-white px-3 py-2 rounded-md hover:opacity-90'
+          >
+            {saving ? 'Saving...' : 'Download'}
+          </button>
+
+          <button
+            onClick={handleSave}
+            className={`px-3 py-2 rounded-md shadow-lg transition-colors ${saved ? 'bg-white text-[#E60023]' : 'bg-[#E60023] text-white hover:opacity-90'}`}
+            title={saved ? 'Remove from collections' : 'Save to collections'}
+          >
+            {saved ? 'Saved' : 'Save'}
+          </button>
+        </div>
 
         <img
           src={src}
