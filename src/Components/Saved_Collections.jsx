@@ -70,6 +70,7 @@ const SavedCollections = ({ onSearch }) => {
                   alt={item.query || 'saved'}
                   className='w-full aspect-[3/4] sm:aspect-auto sm:h-48 object-cover rounded-xl cursor-zoom-in'
                   onClick={() => setActive(item.url)}
+                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x600/333/ffffff?text=No+Preview' }}
                 />
                 <div className='mt-2 flex flex-col gap-2 sm:gap-3 sm:flex-row sm:justify-between sm:items-center'>
                   <div className='min-w-0'>

@@ -8,6 +8,8 @@ import { SITE_NAME } from '../config/site';
 
 const api = "https://ab-pinetrest.abrahamdw882.workers.dev/"
 
+const PLACEHOLDER = 'https://placehold.co/400x600/333/ffffff?text=No+Preview'
+
 const SearchPinterest = () => {
     const [query, setQuery] = useState("");
     const [activeTab, setActiveTab] = useState("pinterest"); // 'pinterest' or 'dribble'
@@ -241,6 +243,11 @@ const SearchPinterest = () => {
             </header>
 
             <main className="wrapper pt-10 px-4">
+                {activeTab === 'dribble' && (
+                    <div className="max-w-7xl mx-auto mb-6 px-4">
+                        <div className="rounded-lg bg-yellow-600/10 border border-yellow-400/20 text-yellow-300 p-3 text-sm text-center">Us sorry — Dribbble tab is in development.</div>
+                    </div>
+                )}
                 {/* Welcome State */}
                 {!q && !loading && (
                     <div className="py-10 sm:py-14 px-2">
@@ -331,6 +338,7 @@ const SearchPinterest = () => {
                                                         alt={term}
                                                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                                         loading="lazy"
+                                                        onError={(e) => { e.target.onerror = null; e.target.src = PLACEHOLDER }}
                                                     />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                                                     <div className="absolute bottom-3 left-3 right-3">
@@ -366,6 +374,7 @@ const SearchPinterest = () => {
                                                     alt={term}
                                                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                                     loading="lazy"
+                                                       onError={(e) => { e.target.onerror = null; e.target.src = PLACEHOLDER }}
                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                                                 <div className="absolute bottom-3 left-3 right-3">
