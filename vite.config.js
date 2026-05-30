@@ -23,10 +23,12 @@ export default defineConfig({
       manifest: {
         name: appName,
         short_name: appName,
+        id: '/',
         description: SITE_DESCRIPTION,
         theme_color: '#111111',
         background_color: '#111111',
         display: 'standalone',
+        display_override: ['standalone'],
         start_url: '/',
         scope: '/',
         icons: [

@@ -1,12 +1,14 @@
 import React from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import SearchPinterest from './Components/search'
+import PwaInstallButton from './Components/PwaInstallButton'
 import SavedPage from './Pages/SavedPage'
 import SettingsPage from './Pages/SettingsPage'
 
 const App = () => {
   return (
     <BrowserRouter>
+      <PwaInstallButton />
       <Routes>
         <Route path='/' element={<SearchPinterest />} />
         <Route path='/saved' element={<SavedPage />} />
