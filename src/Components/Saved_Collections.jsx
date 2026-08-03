@@ -1,14 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { getCollections, removeFromCollection } from '../utils/cacheLogic'
 import FullImageCard from './Full_ImageCard'
 
 const SavedCollections = ({ onSearch }) => {
-  const [items, setItems] = useState([])
+  const [items, setItems] = useState(() => getCollections())
   const [active, setActive] = useState(null)
-
-  useEffect(() => {
-    setItems(getCollections())
-  }, [])
 
   const handleRemove = (id) => {
     removeFromCollection(id)

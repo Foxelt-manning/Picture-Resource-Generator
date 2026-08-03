@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import Seo from '../Components/Seo'
 import { SITE_NAME } from '../config/site'
@@ -18,17 +18,11 @@ const unitOptions = [
 ]
 
 const SettingsPage = () => {
-  const [value, setValue] = useState('')
-  const [unit, setUnit] = useState('')
+  const initialSettings = getCollectionSettings()
+  const [value, setValue] = useState(initialSettings.value || '')
+  const [unit, setUnit] = useState(initialSettings.unit || '')
   const [status, setStatus] = useState('')
-  const [savedCount, setSavedCount] = useState(0)
-
-  useEffect(() => {
-    const settings = getCollectionSettings()
-    setValue(settings.value || '')
-    setUnit(settings.unit || '')
-    setSavedCount(getCollections().length)
-  }, [])
+  const [savedCount, setSavedCount] = useState(() => getCollections().length)
 
   const handleSave = () => {
     if (!value || Number(value) <= 0 || !unit) {

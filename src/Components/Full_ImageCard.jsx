@@ -55,7 +55,7 @@ const FullImageCard = ({ src, alt, query = '', source = '', onClose }) => {
         a.click();
         a.remove();
       }
-    } catch (err) {
+    } catch {
       // final fallback: open in new tab
       try { window.open(src, '_blank', 'noopener,noreferrer'); } catch (e) { console.error(e); }
     } finally {
