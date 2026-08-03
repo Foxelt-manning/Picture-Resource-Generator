@@ -9,6 +9,48 @@ import { SITE_NAME } from '../config/site';
 const api = "https://ab-pinetrest.abrahamdw882.workers.dev/"
 
 const PLACEHOLDER = 'https://placehold.co/400x600/333/ffffff?text=No+Preview'
+const FREE_IMAGE_RESOURCES = [
+    { name: 'Unsplash', description: 'High-quality photos for personal and commercial use.', url: 'https://unsplash.com' },
+    { name: 'Pexels', description: 'Free stock photos and videos from creators.', url: 'https://www.pexels.com' },
+    { name: 'Pixabay', description: 'Royalty-free images, videos, and vectors.', url: 'https://pixabay.com' },
+    { name: 'Openverse', description: 'Openly licensed and public domain media.', url: 'https://openverse.org' }
+]
+const suggestions = [
+    'minimal wallpaper',
+    'dark aesthetic',
+    'home office setup',
+    'travel photography',
+    'fashion inspiration',
+    'nature textures'
+]
+
+const featuredTerms = [
+    'dark aesthetic',
+    'minimal wallpaper',
+    'fashion inspiration',
+    'home office setup',
+    'travel photography',
+    'nature textures'
+]
+
+const normalizeImageUrl = (item) => item?.image || item?.images || item?.url || item?.src || item || null
+
+const createFallbackImages = (term, count = 30) => {
+    const safeTerm = encodeURIComponent((term || 'inspiration').trim().toLowerCase())
+    return Array.from({ length: count }, (_, index) => {
+        const seed = `${safeTerm}-${index + 1}`
+        return {
+            image: `https://picsum.photos/seed/${seed}/640/960`,
+            sourceType: 'fallback'
+        }
+    })
+}
+
+const normalizeApiImages = (payload) => {
+    if (Array.isArray(payload)) return payload.filter(Boolean)
+    if (Array.isArray(payload?.data)) return payload.data.filter(Boolean)
+    return []
+}
 
 const SearchPinterest = () => {
     const [query, setQuery] = useState("");
@@ -20,29 +62,12 @@ const SearchPinterest = () => {
     const [visiblityCount, setVisibilityCount] = useState(20);
     const [q, setQ] = useState("")
     const [loading, setLoading] = useState(false)
+    const [apiNotice, setApiNotice] = useState('')
     const [homeTab, setHomeTab] = useState('recent')
     const [homePreviews, setHomePreviews] = useState([])
     const [previewLoading, setPreviewLoading] = useState(false)
     const location = useLocation();
     const navigate = useNavigate();
-
-    const suggestions = [
-        'minimal wallpaper',
-        'dark aesthetic',
-        'home office setup',
-        'travel photography',
-        'fashion inspiration',
-        'nature textures'
-    ]
-
-    const featuredTerms = [
-        'dark aesthetic',
-        'minimal wallpaper',
-        'fashion inspiration',
-        'home office setup',
-        'travel photography',
-        'nature textures'
-    ]
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -55,6 +80,7 @@ const SearchPinterest = () => {
             setQuery('');
             setQ('');
             setLoading(false);
+            setApiNotice('');
             setVisibilityCount(20);
             return;
         }
@@ -73,18 +99,27 @@ const SearchPinterest = () => {
                 if (searchExists(q, activeTab)) {
                     const cached = getSearch(q, activeTab);
                     setImageData(prev => ({ ...prev, [activeTab]: cached.images || [] }));
+                    setApiNotice('');
                     setLoading(false);
                     return;
                 }
 
                 // Fetch logic (Using Pinterest API as primary)
-                const res = await axios.get(`${api}?query=${q}`)
-                const newImages = res.data.data;
+                const res = await axios.get(`${api}?query=${encodeURIComponent(q)}`, { timeout: 12000 })
+                const newImages = normalizeApiImages(res.data);
+                if (!newImages.length) {
+                    throw new Error('No images returned from API');
+                }
 
                 saveSearch(q, activeTab, newImages);
                 setImageData(prev => ({ ...prev, [activeTab]: newImages }));
+                setApiNotice('');
             } catch (error) {
                 console.error("Error fetching:", error);
+                const fallbackImages = createFallbackImages(q);
+                setImageData(prev => ({ ...prev, [activeTab]: fallbackImages }));
+                setApiNotice('Live API results are temporarily unavailable. Showing free fallback images.');
+                saveSearch(q, activeTab, fallbackImages);
             } finally {
                 setLoading(false);
             }
@@ -105,11 +140,15 @@ const SearchPinterest = () => {
                     let images = cached?.images || [];
 
                     if (!images.length) {
-                        const res = await axios.get(`${api}?query=${encodeURIComponent(term)}`);
-                        images = res.data?.data || [];
+                        try {
+                            const res = await axios.get(`${api}?query=${encodeURIComponent(term)}`, { timeout: 12000 });
+                            images = normalizeApiImages(res.data);
+                        } catch {
+                            images = createFallbackImages(term, 1);
+                        }
                     }
 
-                    const firstImage = images?.[0]?.image || images?.[0]?.images || images?.[0]?.url || images?.[0]?.src || images?.[0] || null;
+                    const firstImage = normalizeImageUrl(images?.[0]);
 
                     if (firstImage) {
                         saveInspirationLink({ term, image: firstImage, source: activeTab });
@@ -406,6 +445,13 @@ const SearchPinterest = () => {
                 {/* Waterfall Grid */}
                 {!loading && imageData[activeTab]?.length > 0 && (
                     <section>
+                        {apiNotice && (
+                            <div className="max-w-7xl mx-auto mb-5 px-4">
+                                <div className="rounded-lg border border-emerald-300/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                                    {apiNotice}
+                                </div>
+                            </div>
+                        )}
                         <div className="all-movies">
                             <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                                 {imageData[activeTab].slice(0, visiblityCount).map((im, i) => (
@@ -426,6 +472,27 @@ const SearchPinterest = () => {
                                 </button>
                             </div>
                         )}
+                    </section>
+                )}
+
+                {!q && !loading && (
+                    <section className="max-w-7xl mx-auto px-2 pb-14">
+                        <div className="mb-3 text-sm sm:text-base font-bold text-gray-300 uppercase tracking-[0.2em]">Free image resources</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                            {FREE_IMAGE_RESOURCES.map((resource) => (
+                                <a
+                                    key={resource.name}
+                                    href={resource.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="rounded-2xl border border-white/10 bg-[#171717] p-4 transition-colors hover:border-white/25 hover:bg-[#1d1d1d]"
+                                >
+                                    <div className="text-base font-bold text-white">{resource.name}</div>
+                                    <div className="mt-2 text-sm text-gray-400">{resource.description}</div>
+                                    <div className="mt-3 text-xs font-semibold text-[#E60023]">Visit resource ↗</div>
+                                </a>
+                            ))}
+                        </div>
                     </section>
                 )}
             </main>
