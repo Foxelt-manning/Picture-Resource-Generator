@@ -4,17 +4,18 @@ import FullImageCard from './Full_ImageCard'
 import { saveToCollection, isSaved, removeFromCollection } from '../utils/cacheLogic'
 
 const ImageCard = ({ data, query }) => {
-  if (!data) return null
-  
+  const ImageUrl = data?.image || data?.images || data?.url || data?.src || data
   const [active, setActive] = useState(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
   const [toastKind, setToastKind] = useState('save');
-  // Extract URL from various possible API formats
-  const ImageUrl = data.image || data.images || data.url || data.src || data;
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    if (!ImageUrl) {
+      setSaved(false)
+      return
+    }
     setSaved(isSaved(ImageUrl));
   }, [ImageUrl]);
 
@@ -23,6 +24,8 @@ const ImageCard = ({ data, query }) => {
     const timer = setTimeout(() => setToast(''), 1800);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  if (!ImageUrl) return null
 
   return (
     <>

@@ -1,16 +1,70 @@
-# React + Vite
+# Picture Resource Generator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + Vite PWA for searching visual inspiration, saving image collections locally, and quickly reusing previous searches.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Visual search experience with Pinterest-style cards.
+- Local caching for searches and saved collections.
+- Saved collections page with grouped results.
+- Collection retention settings and pruning.
+- PWA support for install/offline-friendly behavior.
+- Fallback image mode when the upstream image API is unavailable.
+- Curated free image resource links (Unsplash, Pexels, Pixabay, Openverse).
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19
+- Vite 7
+- React Router 7
+- Tailwind CSS 4
+- ESLint 9
+- vite-plugin-pwa
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 1) Install dependencies
+
+```bash
+npm ci
+```
+
+### 2) Start development server
+
+```bash
+npm run dev
+```
+
+### 3) Build for production
+
+```bash
+npm run build
+```
+
+### 4) Preview production build
+
+```bash
+npm run preview
+```
+
+## Linting
+
+Run project lint checks with:
+
+```bash
+npm run lint
+```
+
+`dist` and generated `dev-dist` files are ignored by ESLint.
+
+## Project Structure
+
+- `/home/runner/work/Picture-Resource-Generator/Picture-Resource-Generator/src/Components` – UI components
+- `/home/runner/work/Picture-Resource-Generator/Picture-Resource-Generator/src/Pages` – route pages
+- `/home/runner/work/Picture-Resource-Generator/Picture-Resource-Generator/src/utils/cacheLogic.js` – localStorage caching and collection utilities
+- `/home/runner/work/Picture-Resource-Generator/Picture-Resource-Generator/src/config` – site-level constants
+
+## Notes
+
+- The app stores recent searches and saved collections in browser localStorage.
+- If the external image API fails or is empty, fallback images are shown so the UI remains functional.
