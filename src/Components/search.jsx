@@ -6,14 +6,33 @@ import Seo from './Seo';
 import { saveSearch, searchExists, getSearch, getRecentSearches, saveInspirationLink, getInspirationLinks } from '../utils/cacheLogic';
 import { SITE_NAME } from '../config/site';
 
-const api = "https://ab-pinetrest.abrahamdw882.workers.dev/"
+const PINTEREST_API = "https://ab-pinetrest.abrahamdw882.workers.dev/"
+const OPENVERSE_API = 'https://api.openverse.org/v1/images/'
+const WIKIMEDIA_API = 'https://commons.wikimedia.org/w/api.php'
+const GIPHY_API = 'https://api.giphy.com/v1'
+const GIPHY_PUBLIC_KEY = 'dc6zaTOxFJmzC'
+
+const SOURCE_CONFIG = {
+    pinterest: { label: 'Pinterest', placeholder: 'Search Pinterest...' },
+    openverse: { label: 'Openverse', placeholder: 'Search Openverse images...' },
+    wikimedia: { label: 'Wikimedia', placeholder: 'Search Wikimedia Commons...' },
+    gifs: { label: 'GIFs', placeholder: 'Search GIFs...' },
+    stickers: { label: 'Stickers', placeholder: 'Search sticker packs...' }
+}
+
+const SEARCH_SOURCES = Object.keys(SOURCE_CONFIG)
 
 const PLACEHOLDER = 'https://placehold.co/400x600/333/ffffff?text=No+Preview'
 const FREE_IMAGE_RESOURCES = [
-    { name: 'Unsplash', description: 'High-quality photos for personal and commercial use.', url: 'https://unsplash.com' },
-    { name: 'Pexels', description: 'Free stock photos and videos from creators.', url: 'https://www.pexels.com' },
-    { name: 'Pixabay', description: 'Royalty-free images, videos, and vectors.', url: 'https://pixabay.com' },
-    { name: 'Openverse', description: 'Openly licensed and public domain media.', url: 'https://openverse.org' }
+    { name: 'Pinterest Worker API', description: 'Community Pinterest-style search endpoint used in this app.', url: 'https://ab-pinetrest.abrahamdw882.workers.dev/' },
+    { name: 'Openverse API', description: 'Openly licensed image search API with free usage.', url: 'https://api.openverse.org/v1/images/' },
+    { name: 'Wikimedia Commons API', description: 'Media search from Wikimedia Commons free assets.', url: 'https://commons.wikimedia.org/w/api.php' },
+    { name: 'Picsum', description: 'Random/fallback free placeholder images.', url: 'https://picsum.photos' }
+]
+const GIF_STICKER_RESOURCES = [
+    { name: 'GIPHY GIF API', description: 'Free public beta key powered GIF search in-app.', url: 'https://developers.giphy.com/docs/api/endpoint#search' },
+    { name: 'GIPHY Stickers API', description: 'Free sticker pack search endpoint integrated in-app.', url: 'https://developers.giphy.com/docs/api/endpoint#stickers-search' },
+    { name: 'Open Sticker Collection', description: 'Free sticker resources for design exploration.', url: 'https://www.freepik.com/free-stickers' }
 ]
 const suggestions = [
     'minimal wallpaper',
@@ -33,12 +52,15 @@ const featuredTerms = [
     'nature textures'
 ]
 
-const normalizeImageUrl = (item) => item?.image || item?.images || item?.url || item?.src || item || null
+const normalizeImageUrl = (item) => {
+    if (typeof item === 'string') return item
+    return item?.image || item?.images || item?.url || item?.src || item?.preview || null
+}
 
-const createFallbackImages = (term, count = 30) => {
+const createFallbackImages = (term, source, count = 30) => {
     const safeTerm = encodeURIComponent((term || 'inspiration').trim().toLowerCase())
     return Array.from({ length: count }, (_, index) => {
-        const seed = `${safeTerm}-${index + 1}`
+        const seed = `${source || 'fallback'}-${safeTerm}-${index + 1}`
         return {
             image: `https://picsum.photos/seed/${seed}/640/960`,
             sourceType: 'fallback'
@@ -52,13 +74,87 @@ const normalizeApiImages = (payload) => {
     return []
 }
 
+const createInitialImageState = () => SEARCH_SOURCES.reduce((acc, key) => ({ ...acc, [key]: [] }), {})
+
+const getSourceLabel = (source) => SOURCE_CONFIG[source]?.label || source
+
+const fetchFromSource = async (query, source) => {
+    if (source === 'pinterest') {
+        const res = await axios.get(`${PINTEREST_API}?query=${encodeURIComponent(query)}`, { timeout: 12000 })
+        return normalizeApiImages(res.data).map((item) => ({ ...item, sourceType: 'pinterest' }))
+    }
+
+    if (source === 'openverse') {
+        const res = await axios.get(OPENVERSE_API, {
+            timeout: 12000,
+            params: {
+                q: query,
+                page_size: 30
+            }
+        })
+
+        return (res.data?.results || [])
+            .map((item) => ({
+                image: item?.url,
+                sourceType: 'openverse'
+            }))
+            .filter((item) => Boolean(item.image))
+    }
+
+    if (source === 'wikimedia') {
+        const res = await axios.get(WIKIMEDIA_API, {
+            timeout: 12000,
+            params: {
+                action: 'query',
+                format: 'json',
+                origin: '*',
+                generator: 'search',
+                gsrsearch: query,
+                gsrnamespace: 6,
+                gsrlimit: 30,
+                prop: 'imageinfo',
+                iiprop: 'url'
+            }
+        })
+
+        const pages = res.data?.query?.pages || {}
+
+        return Object.values(pages)
+            .map((page) => ({
+                image: page?.imageinfo?.[0]?.url,
+                sourceType: 'wikimedia'
+            }))
+            .filter((item) => Boolean(item.image))
+    }
+
+    if (source === 'gifs' || source === 'stickers') {
+        const endpoint = source === 'gifs' ? 'gifs/search' : 'stickers/search'
+        const res = await axios.get(`${GIPHY_API}/${endpoint}`, {
+            timeout: 12000,
+            params: {
+                api_key: GIPHY_PUBLIC_KEY,
+                q: query,
+                limit: 30,
+                rating: 'pg'
+            }
+        })
+
+        return (res.data?.data || [])
+            .map((item) => ({
+                image: item?.images?.fixed_width?.url || item?.images?.downsized?.url || item?.images?.original?.url,
+                preview: item?.images?.fixed_width_still?.url,
+                sourceType: source
+            }))
+            .filter((item) => Boolean(item.image))
+    }
+
+    return []
+}
+
 const SearchPinterest = () => {
     const [query, setQuery] = useState("");
-    const [activeTab, setActiveTab] = useState("pinterest"); // 'pinterest' or 'dribble'
-    const [imageData, setImageData] = useState({ 
-        pinterest: [],
-        dribble: [] 
-    });
+    const [activeTab, setActiveTab] = useState("pinterest");
+    const [imageData, setImageData] = useState(createInitialImageState());
     const [visiblityCount, setVisibilityCount] = useState(20);
     const [q, setQ] = useState("")
     const [loading, setLoading] = useState(false)
@@ -73,8 +169,9 @@ const SearchPinterest = () => {
         const params = new URLSearchParams(location.search);
         const routeQuery = params.get('q') || '';
         const routeTab = params.get('tab') || 'pinterest';
+        const validTab = SEARCH_SOURCES.includes(routeTab) ? routeTab : 'pinterest'
 
-        setActiveTab(routeTab);
+        setActiveTab(validTab);
 
         if (!routeQuery) {
             setQuery('');
@@ -95,7 +192,6 @@ const SearchPinterest = () => {
             if (!q) return;
             setLoading(true);
             try {
-                // Check Cache first
                 if (searchExists(q, activeTab)) {
                     const cached = getSearch(q, activeTab);
                     setImageData(prev => ({ ...prev, [activeTab]: cached.images || [] }));
@@ -104,9 +200,7 @@ const SearchPinterest = () => {
                     return;
                 }
 
-                // Fetch logic (Using Pinterest API as primary)
-                const res = await axios.get(`${api}?query=${encodeURIComponent(q)}`, { timeout: 12000 })
-                const newImages = normalizeApiImages(res.data);
+                const newImages = await fetchFromSource(q, activeTab);
                 if (!newImages.length) {
                     throw new Error('No images returned from API');
                 }
@@ -116,16 +210,16 @@ const SearchPinterest = () => {
                 setApiNotice('');
             } catch (error) {
                 console.error("Error fetching:", error);
-                const fallbackImages = createFallbackImages(q);
+                const fallbackImages = createFallbackImages(q, activeTab);
                 setImageData(prev => ({ ...prev, [activeTab]: fallbackImages }));
-                setApiNotice('Live API results are temporarily unavailable. Showing free fallback images.');
+                setApiNotice(`Live ${getSourceLabel(activeTab)} results are temporarily unavailable. Showing free fallback images.`);
                 saveSearch(q, activeTab, fallbackImages);
             } finally {
                 setLoading(false);
             }
-        } 
+        }
         fetchImages()
-    }, [q, activeTab]) // Refetch if query or tab changes
+    }, [q, activeTab])
 
     useEffect(() => {
         if (q) return;
@@ -141,10 +235,9 @@ const SearchPinterest = () => {
 
                     if (!images.length) {
                         try {
-                            const res = await axios.get(`${api}?query=${encodeURIComponent(term)}`, { timeout: 12000 });
-                            images = normalizeApiImages(res.data);
+                            images = await fetchFromSource(term, activeTab)
                         } catch {
-                            images = createFallbackImages(term, 1);
+                            images = createFallbackImages(term, activeTab, 1);
                         }
                     }
 
@@ -201,7 +294,7 @@ const SearchPinterest = () => {
         setQ('');
         setLoading(false);
         setVisibilityCount(20);
-        setImageData({ pinterest: [], dribble: [] });
+        setImageData(createInitialImageState());
         setHomeTab('recent');
         navigate('/', { replace: true });
     }
@@ -220,13 +313,14 @@ const SearchPinterest = () => {
         setVisibilityCount(20);
     }
 
+    const activeLabel = getSourceLabel(activeTab)
+
     return (
         <div className="min-h-screen bg-[#111] text-white font-dm-sans">
             <Seo
-                title={q ? `${q} on ${activeTab}` : `${SITE_NAME} visual search`}
-                description={q ? `Explore ${q} inspiration from ${activeTab}. Save results, revisit recent searches, and install the PWA.` : 'Search visual inspiration, save collections, and install the PWA for a faster experience.'}
+                title={q ? `${q} on ${activeLabel}` : `${SITE_NAME} visual search`}
+                description={q ? `Explore ${q} inspiration from ${activeLabel}. Save results, revisit recent searches, and install the PWA.` : 'Search visual inspiration, save collections, and install the PWA for a faster experience.'}
             />
-            {/* Header with Search & Tabs */}
             <header className="sticky top-0 z-50 bg-[#111]/95 backdrop-blur-md border-b border-white/10">
                 <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 space-y-3 sm:space-y-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
@@ -245,29 +339,27 @@ const SearchPinterest = () => {
                                 Settings
                             </Link>
                         </div>
-                        
-                        {/* Tab Switcher */}
+
                         <nav className="flex flex-wrap gap-1 bg-[#222] p-1 rounded-full w-fit max-w-full overflow-x-auto">
-                            {['pinterest', 'dribble'].map((tab) => (
+                            {SEARCH_SOURCES.map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => handleTabChange(tab)}
-                                    className={`px-4 sm:px-6 py-2 rounded-full text-sm font-bold capitalize transition-all ${
-                                        activeTab === tab 
-                                        ? 'bg-white text-black shadow-lg' 
+                                    className={`px-4 sm:px-6 py-2 rounded-full text-sm font-bold capitalize transition-all whitespace-nowrap ${
+                                        activeTab === tab
+                                        ? 'bg-white text-black shadow-lg'
                                         : 'text-gray-400 hover:text-white'
                                     }`}
                                 >
-                                    {tab}
+                                    {getSourceLabel(tab)}
                                 </button>
                             ))}
                         </nav>
 
-                        {/* Search Bar */}
                         <div className="relative flex-1 group min-w-0 w-full">
-                            <input 
-                                type="text" 
-                                placeholder={`Search ${activeTab}...`} 
+                            <input
+                                type="text"
+                                placeholder={SOURCE_CONFIG[activeTab]?.placeholder || `Search ${activeLabel}...`}
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -282,17 +374,11 @@ const SearchPinterest = () => {
             </header>
 
             <main className="wrapper pt-10 px-4">
-                {activeTab === 'dribble' && (
-                    <div className="max-w-7xl mx-auto mb-6 px-4">
-                        <div className="rounded-lg bg-yellow-600/10 border border-yellow-400/20 text-yellow-300 p-3 text-sm text-center">Us sorry — Dribbble tab is in development.</div>
-                    </div>
-                )}
-                {/* Welcome State */}
                 {!q && !loading && (
                     <div className="py-10 sm:py-14 px-2">
                         <div className="text-center">
                         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 bg-gradient-to-b from-white to-gray-500 bg-clip-text text-transparent">
-                            Get your next <br/> {activeTab} idea
+                            Get your next <br/> {activeLabel} idea
                         </h1>
                         </div>
 
@@ -324,7 +410,7 @@ const SearchPinterest = () => {
                                             className="rounded-2xl border border-white/10 bg-[#171717] px-3 py-3 text-left hover:border-white/25 hover:bg-[#1d1d1d] transition-colors"
                                         >
                                             <div className="text-sm font-semibold text-white truncate">{item.query}</div>
-                                            <div className="mt-1 text-xs text-gray-400 capitalize">{item.source || 'pinterest'}</div>
+                                            <div className="mt-1 text-xs text-gray-400 capitalize">{getSourceLabel(item.source || 'pinterest')}</div>
                                         </button>
                                     )) : (
                                         <div className="col-span-full rounded-2xl border border-dashed border-white/10 bg-[#171717] px-4 py-8 text-center text-sm text-gray-400">
@@ -413,7 +499,7 @@ const SearchPinterest = () => {
                                                     alt={term}
                                                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                                     loading="lazy"
-                                                       onError={(e) => { e.target.onerror = null; e.target.src = PLACEHOLDER }}
+                                                    onError={(e) => { e.target.onerror = null; e.target.src = PLACEHOLDER }}
                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                                                 <div className="absolute bottom-3 left-3 right-3">
@@ -442,7 +528,6 @@ const SearchPinterest = () => {
                     </div>
                 )}
 
-                {/* Waterfall Grid */}
                 {!loading && imageData[activeTab]?.length > 0 && (
                     <section>
                         {apiNotice && (
@@ -464,11 +549,11 @@ const SearchPinterest = () => {
 
                         {visiblityCount < imageData[activeTab].length && (
                             <div className="flex justify-center py-12 sm:py-16">
-                                <button 
+                                <button
                                     className="bg-white text-black rounded-full px-8 sm:px-12 py-3 sm:py-4 font-bold hover:scale-105 transition-all shadow-xl active:scale-95"
                                     onClick={() => setVisibilityCount(prev => prev + 20)}
                                 >
-                                    More {activeTab} results
+                                    More {activeLabel} results
                                 </button>
                             </div>
                         )}
@@ -476,24 +561,60 @@ const SearchPinterest = () => {
                 )}
 
                 {!q && !loading && (
-                    <section className="max-w-7xl mx-auto px-2 pb-14">
-                        <div className="mb-3 text-sm sm:text-base font-bold text-gray-300 uppercase tracking-[0.2em]">Free image resources</div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                            {FREE_IMAGE_RESOURCES.map((resource) => (
-                                <a
-                                    key={resource.name}
-                                    href={resource.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="rounded-2xl border border-white/10 bg-[#171717] p-4 transition-colors hover:border-white/25 hover:bg-[#1d1d1d]"
+                    <>
+                        <section className="max-w-7xl mx-auto px-2 pb-8">
+                            <div className="mb-3 text-sm sm:text-base font-bold text-gray-300 uppercase tracking-[0.2em]">Free image APIs integrated</div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                                {FREE_IMAGE_RESOURCES.map((resource) => (
+                                    <a
+                                        key={resource.name}
+                                        href={resource.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="rounded-2xl border border-white/10 bg-[#171717] p-4 transition-colors hover:border-white/25 hover:bg-[#1d1d1d]"
+                                    >
+                                        <div className="text-base font-bold text-white">{resource.name}</div>
+                                        <div className="mt-2 text-sm text-gray-400">{resource.description}</div>
+                                        <div className="mt-3 text-xs font-semibold text-[#E60023]">Visit resource ↗</div>
+                                    </a>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section className="max-w-7xl mx-auto px-2 pb-14">
+                            <div className="mb-3 text-sm sm:text-base font-bold text-gray-300 uppercase tracking-[0.2em]">GIFs and sticker packs</div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => runQuickSearch('trending reaction', 'gifs')}
+                                    className="rounded-2xl border border-white/10 bg-[#171717] p-4 text-left transition-colors hover:border-white/25 hover:bg-[#1d1d1d]"
                                 >
-                                    <div className="text-base font-bold text-white">{resource.name}</div>
-                                    <div className="mt-2 text-sm text-gray-400">{resource.description}</div>
-                                    <div className="mt-3 text-xs font-semibold text-[#E60023]">Visit resource ↗</div>
-                                </a>
-                            ))}
-                        </div>
-                    </section>
+                                    <div className="text-base font-bold text-white">Explore GIF search</div>
+                                    <div className="mt-2 text-sm text-gray-400">Loads live free GIF API results inside this app.</div>
+                                    <div className="mt-3 text-xs font-semibold text-[#E60023]">Open GIFs tab →</div>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => runQuickSearch('cute sticker pack', 'stickers')}
+                                    className="rounded-2xl border border-white/10 bg-[#171717] p-4 text-left transition-colors hover:border-white/25 hover:bg-[#1d1d1d]"
+                                >
+                                    <div className="text-base font-bold text-white">Explore sticker packs</div>
+                                    <div className="mt-2 text-sm text-gray-400">Search sticker endpoints and save packs locally.</div>
+                                    <div className="mt-3 text-xs font-semibold text-[#E60023]">Open Stickers tab →</div>
+                                </button>
+                                <div className="rounded-2xl border border-white/10 bg-[#171717] p-4">
+                                    <div className="text-base font-bold text-white">Free GIF/sticker resources</div>
+                                    <div className="mt-2 space-y-2 text-sm text-gray-400">
+                                        {GIF_STICKER_RESOURCES.map((resource) => (
+                                            <a key={resource.name} href={resource.url} target="_blank" rel="noopener noreferrer" className="block hover:text-white">
+                                                <span className="font-semibold text-gray-300">{resource.name}:</span> {resource.description}
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </>
                 )}
             </main>
         </div>

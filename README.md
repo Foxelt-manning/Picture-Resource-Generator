@@ -4,13 +4,14 @@ A React + Vite PWA for searching visual inspiration, saving image collections lo
 
 ## Features
 
-- Visual search experience with Pinterest-style cards.
+- Visual search experience across Pinterest, Openverse, Wikimedia, GIFs, and Stickers.
 - Local caching for searches and saved collections.
 - Saved collections page with grouped results.
 - Collection retention settings and pruning.
 - PWA support for install/offline-friendly behavior.
-- Fallback image mode when the upstream image API is unavailable.
-- Curated free image resource links (Unsplash, Pexels, Pixabay, Openverse).
+- Fallback image mode when upstream APIs are unavailable.
+- Integrated free APIs: Pinterest Worker, Openverse, Wikimedia Commons, and GIPHY (GIF + stickers).
+- Dedicated GIFs and sticker packs section with in-app quick search.
 
 ## Tech Stack
 
