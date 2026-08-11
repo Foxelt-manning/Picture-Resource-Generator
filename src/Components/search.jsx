@@ -24,15 +24,13 @@ const SEARCH_SOURCES = Object.keys(SOURCE_CONFIG)
 
 const PLACEHOLDER = 'https://placehold.co/400x600/333/ffffff?text=No+Preview'
 const FREE_IMAGE_RESOURCES = [
-    { name: 'Pinterest Worker API', description: 'Community Pinterest-style search endpoint used in this app.', url: 'https://ab-pinetrest.abrahamdw882.workers.dev/' },
-    { name: 'Openverse API', description: 'Openly licensed image search API with free usage.', url: 'https://api.openverse.org/v1/images/' },
-    { name: 'Wikimedia Commons API', description: 'Media search from Wikimedia Commons free assets.', url: 'https://commons.wikimedia.org/w/api.php' },
-    { name: 'Picsum', description: 'Random/fallback free placeholder images.', url: 'https://picsum.photos' }
+    { name: 'Pinterest Worker API', description: 'Community Pinterest-style search endpoint used in this app.', tab: 'pinterest', query: 'minimal wallpaper', cta: 'Search Pinterest →' },
+    { name: 'Openverse API', description: 'Openly licensed image search API with free usage.', tab: 'openverse', query: 'nature textures', cta: 'Search Openverse →' },
+    { name: 'Wikimedia Commons API', description: 'Media search from Wikimedia Commons free assets.', tab: 'wikimedia', query: 'travel photography', cta: 'Search Wikimedia →' }
 ]
 const GIF_STICKER_RESOURCES = [
-    { name: 'GIPHY GIF API', description: 'Free public beta key powered GIF search in-app.', url: 'https://developers.giphy.com/docs/api/endpoint#search' },
-    { name: 'GIPHY Stickers API', description: 'Free sticker pack search endpoint integrated in-app.', url: 'https://developers.giphy.com/docs/api/endpoint#stickers-search' },
-    { name: 'Open Sticker Collection', description: 'Free sticker resources for design exploration.', url: 'https://www.freepik.com/free-stickers' }
+    { name: 'GIPHY GIF API', description: 'Free public beta key powered GIF search in-app.', tab: 'gifs', query: 'trending reaction' },
+    { name: 'GIPHY Stickers API', description: 'Free sticker pack search endpoint integrated in-app.', tab: 'stickers', query: 'cute sticker pack' }
 ]
 const suggestions = [
     'minimal wallpaper',
@@ -566,17 +564,16 @@ const SearchPinterest = () => {
                             <div className="mb-3 text-sm sm:text-base font-bold text-gray-300 uppercase tracking-[0.2em]">Free image APIs integrated</div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                                 {FREE_IMAGE_RESOURCES.map((resource) => (
-                                    <a
+                                    <button
                                         key={resource.name}
-                                        href={resource.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                        type="button"
+                                        onClick={() => runQuickSearch(resource.query, resource.tab)}
                                         className="rounded-2xl border border-white/10 bg-[#171717] p-4 transition-colors hover:border-white/25 hover:bg-[#1d1d1d]"
                                     >
                                         <div className="text-base font-bold text-white">{resource.name}</div>
                                         <div className="mt-2 text-sm text-gray-400">{resource.description}</div>
-                                        <div className="mt-3 text-xs font-semibold text-[#E60023]">Visit resource ↗</div>
-                                    </a>
+                                        <div className="mt-3 text-xs font-semibold text-[#E60023]">{resource.cta}</div>
+                                    </button>
                                 ))}
                             </div>
                         </section>
@@ -606,9 +603,14 @@ const SearchPinterest = () => {
                                     <div className="text-base font-bold text-white">Free GIF/sticker resources</div>
                                     <div className="mt-2 space-y-2 text-sm text-gray-400">
                                         {GIF_STICKER_RESOURCES.map((resource) => (
-                                            <a key={resource.name} href={resource.url} target="_blank" rel="noopener noreferrer" className="block hover:text-white">
+                                            <button
+                                                key={resource.name}
+                                                type="button"
+                                                onClick={() => runQuickSearch(resource.query, resource.tab)}
+                                                className="block w-full text-left hover:text-white"
+                                            >
                                                 <span className="font-semibold text-gray-300">{resource.name}:</span> {resource.description}
-                                            </a>
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
